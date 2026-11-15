@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Fanlar</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-secondary-bg-color, #f1f2f6);
+    --card: var(--tg-theme-bg-color, #ffffff);
+    --text: var(--tg-theme-text-color, #14161a);
+    --hint: var(--tg-theme-hint-color, #7d8590);
+    --accent: var(--tg-theme-button-color, #2f7df6);
+    --accent-text: var(--tg-theme-button-text-color, #ffffff);
+    --ok: #1f9d55; --bad: #d64545;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #app { max-width: 560px; margin: 0 auto; padding: 16px 14px 96px; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  header h1 { font-size: 22px; margin: 0; flex: 1; line-height: 1.2; }
+  .crumb { color: var(--hint); font-size: 13px; margin: -8px 0 12px; }
+  .back { border: 0; background: var(--card); color: var(--text); width: 36px; height: 36px;
+    border-radius: 50%; font-size: 18px; cursor: pointer; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid.three { grid-template-columns: repeat(3, 1fr); }
+  .tile { background: var(--card); border-radius: 16px; padding: 18px 12px; text-align: center;
+    cursor: pointer; position: relative; border: 0; color: inherit; font: inherit; width: 100%; }
+  .tile:active, .row:active { opacity: .7; }
+  .tile .em { font-size: 34px; display: block; margin-bottom: 6px; }
+  .tile .big { font-size: 30px; font-weight: 700; display: block; }
+  .tile small, .row small { color: var(--hint); font-size: 13px; }
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .row { background: var(--card); border-radius: 14px; padding: 14px; display: flex;
+    align-items: center; gap: 10px; cursor: pointer; }
+  .row .main { flex: 1; min-width: 0; }
+  .row .main b { font-weight: 600; display: block; overflow-wrap: anywhere; }
+  .tools { display: flex; gap: 6px; }
+  .tools button { border: 0; background: var(--bg); border-radius: 10px; width: 34px; height: 34px;
+    font-size: 15px; cursor: pointer; }
+  .tile .tools { position: absolute; top: 6px; right: 6px; }
+  .tile .tools button { width: 28px; height: 28px; font-size: 13px; }
+  .btn { border: 0; border-radius: 14px; padding: 14px 18px; font: inherit; font-weight: 600;
+    background: var(--accent); color: var(--accent-text); width: 100%; cursor: pointer; }
+  .btn.ghost { background: var(--card); color: var(--accent); }
+  .btn:disabled { opacity: .5; }
+  .add { margin-top: 12px; border: 1.5px dashed var(--hint); background: transparent;
+    color: var(--hint); }
+  .empty { text-align: center; color: var(--hint); padding: 40px 10px; }
+  .adminbar { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 14px 14px;
+    background: var(--bg); display: flex; justify-content: center; }
+  .adminbar button { max-width: 532px; }
+  /* Savol ekrani */
+  .progress { height: 6px; border-radius: 3px; background: var(--card); overflow: hidden;
+    margin-bottom: 16px; }
+  .progress i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+  .qcard { background: var(--card); border-radius: 18px; padding: 22px 18px; font-size: 20px;
+    font-weight: 600; text-align: center; overflow-wrap: anywhere; }
+  .qnum { color: var(--hint); font-size: 13px; text-align: center; margin-bottom: 8px; }
+  .micwrap { text-align: center; margin: 26px 0 10px; }
+  .mic { width: 104px; height: 104px; border-radius: 50%; border: 0; font-size: 42px;
+    background: var(--accent); color: var(--accent-text); cursor: pointer; }
+  .mic.rec { background: var(--bad); animation: pulse 1.2s infinite; }
+  .mic:disabled { opacity: .5; animation: none; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(214,69,69,.5); }
+    100% { box-shadow: 0 0 0 22px rgba(214,69,69,0); } }
+  .michint { color: var(--hint); font-size: 14px; margin-top: 10px; min-height: 20px; }
+  .typed { display: flex; gap: 8px; margin-top: 18px; }
+  input, textarea { width: 100%; border: 1px solid transparent; border-radius: 12px;
+    padding: 12px; font: inherit; background: var(--card); color: var(--text); outline: none; }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  .typed button { width: auto; padding: 0 16px; }
+  .result { border-radius: 18px; padding: 18px; margin-top: 18px; background: var(--card);
+    border-left: 6px solid var(--ok); }
+  .result.bad { border-left-color: var(--bad); }
+  .result h2 { margin: 0 0 8px; font-size: 20px; color: var(--ok); }
+  .result.bad h2 { color: var(--bad); }
+  .result p { margin: 6px 0; overflow-wrap: anywhere; }
+  .result span { color: var(--hint); font-size: 13px; display: block; }
+  .orb { width: 132px; height: 132px; border-radius: 50%; border: 0; font-size: 52px;
+    background: var(--card); color: var(--text); cursor: pointer; }
+  .orb.speaking { background: var(--accent); animation: breathe 1.4s ease-in-out infinite; }
+  .orb.listening { background: var(--bad); animation: pulse 1.2s infinite; }
+  .orb.ok { background: var(--ok); } .orb.no { background: var(--bad); }
+  @keyframes breathe { 50% { transform: scale(1.07); } }
+  .modes { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .modes .btn { padding: 18px; text-align: left; }
+  .modes .btn small { display: block; font-weight: 400; opacity: .8; margin-top: 2px; }
+  .score { text-align: center; padding: 30px 10px; }
+  .score .num { font-size: 56px; font-weight: 800; }
+  /* Modal */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex;
+    align-items: flex-end; justify-content: center; z-index: 10; }
+  .sheet { background: var(--bg); width: 100%; max-width: 560px; border-radius: 20px 20px 0 0;
+    padding: 18px 14px 22px; }
+  .sheet h3 { margin: 0 0 12px; }
+  .sheet label { font-size: 13px; color: var(--hint); display: block; margin: 10px 0 4px; }
+  .sheet .actions { display: flex; gap: 8px; margin-top: 16px; }
+  .toast { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); background: #222;
+    color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 14px; z-index: 20;
+    max-width: 90%; text-align: center; }
+</style>
+</head>
+<body>
+<div id="app"><div class="empty">Yuklanmoqda…</div></div>
+<script>
+const tg = window.Telegram ? window.Telegram.WebApp : null;
+if (tg) { tg.ready(); tg.expand(); }
+const $app = document.getElementById('app');
+const state = { me: null, edit: false, stack: [] };
+const GRADES = [6, 7, 8, 9, 10, 11];
+
+// ---------- Yordamchi funksiyalar ----------
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function api(path, opts = {}) {
+  const headers = Object.assign({ 'X-Init-Data': tg ? tg.initData : '' }, opts.headers || {});
+  if (opts.json) { headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(opts.json); }
+  let r;
+  try { r = await fetch(path, { method: opts.method || 'GET', headers, body: opts.body }); }
+  catch (e) { throw new Error('Internet aloqasi yoʻq'); }
+  let data = null;
+  try { data = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error((data && typeof data.detail === 'string' && data.detail) || 'Xatolik yuz berdi');
+  return data;
+}
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2800);
+}
+
+function confirmBox(msg) {
+  return new Promise(res => {
+    if (tg && tg.showConfirm && tg.isVersionAtLeast && tg.isVersionAtLeast('6.2')) tg.showConfirm(msg, res);
+    else res(window.confirm(msg));
+  });
+}
+
+// Admin uchun kiritish oynasi: fields = [{key, label, value, multiline}]
+function formSheet(title, fields) {
+  return new Promise(res => {
+    const ov = document.createElement('div');
+    ov.className = 'overlay';
+    ov.innerHTML = `<div class="sheet"><h3>${esc(title)}</h3>` +
+      fields.map(f => `<label>${esc(f.label)}</label>` + (f.multiline
+        ? `<textarea rows="3" data-k="${f.key}">${esc(f.value || '')}</textarea>`
+        : `<input data-k="${f.key}" value="${esc(f.value || '')}">`)).join('') +
+      `<div class="actions"><button class="btn ghost" data-a="no">Bekor qilish</button>
+       <button class="btn" data-a="ok">Saqlash</button></div></div>`;
+    document.body.appendChild(ov);
+    const close = v => { ov.remove(); res(v); };
+    ov.addEventListener('click', e => {
+      if (e.target === ov || e.target.dataset.a === 'no') return close(null);
+      if (e.target.dataset.a === 'ok') {
+        const out = {};
+        for (const el of ov.querySelectorAll('[data-k]')) {
+          out[el.dataset.k] = el.value.trim();
+          if (!out[el.dataset.k]) { el.focus(); return toast('Barcha maydonlarni toʻldiring'); }
+        }
+        close(out);
+      }
+    });
+    const first = ov.querySelector('[data-k]');
+    if (first) first.focus();
+  });
+}
+
+// ---------- Navigatsiya ----------
+function go(view) { stopVoice(); stopRecording(true); state.stack.push(view); render(); }
+function back() { stopVoice(); stopRecording(true); if (state.stack.length > 1) { state.stack.pop(); render(); } }
+if (tg && tg.BackButton) tg.BackButton.onClick(back);
+
+async function render() {
+  const view = state.stack[state.stack.length - 1];
+  const deep = state.stack.length > 1;
+  if (tg && tg.BackButton) { deep ? tg.BackButton.show() : tg.BackButton.hide(); }
+  try { await VIEWS[view.name](view); }
+  catch (e) { $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+  window.scrollTo(0, 0);
+}
+
+function head(title, crumb) {
+  const deep = state.stack.length > 1;
+  const showBack = deep && !(tg && tg.BackButton && tg.initData);
+  return `<header>${showBack ? '<button class="back" data-act="back">←</button>' : ''}
+    <h1>${esc(title)}</h1></header>${crumb ? `<div class="crumb">${esc(crumb)}</div>` : ''}`;
+}
+
+function adminBar() {
+  if (!state.me || !state.me.is_admin) return '';
+  return `<div class="adminbar"><button class="btn ${state.edit ? '' : 'ghost'}" data-act="toggle-edit">
+    ${state.edit ? '✓ Tahrirlashni tugatish' : '✏️ Tahrirlash (admin)'}</button></div>`;
+}
+
+const tools = (kind, id) => state.edit
+  ? `<span class="tools"><button data-act="edit-${kind}" data-id="${id}">✏️</button>` +
+    `<button data-act="del-${kind}" data-id="${id}">🗑</button></span>` : '';
+
+// ---------- Ekranlar ----------
+const VIEWS = {
+  async subjects(view) {
+    const list = await api('/api/subjects');
+    view.data = list;
+    $app.innerHTML = head('Fanlar') +
+      (list.length ? `<div class="grid">${list.map(s => `
+        <div class="tile" data-act="open-subject" data-id="${s.id}">
+          ${tools('subject', s.id)}<span class="em">${esc(s.emoji)}</span><b>${esc(s.name)}</b>
+        </div>`).join('')}</div>` : '<div class="empty">Hozircha fanlar qoʻshilmagan</div>') +
+      (state.edit ? '<button class="btn add" data-act="add-subject">+ Fan qoʻshish</button>' : '') +
+      adminBar();
+  },
+
+  async grades(view) {
+    const s = await api('/api/subjects/' + view.subject.id);
+    $app.innerHTML = head(s.emoji + ' ' + s.name, 'Sinfni tanlang') +
+      `<div class="grid three">${s.grades.map(g => `
+        <div class="tile" data-act="open-grade" data-id="${g.grade}">
+          <span class="big">${g.grade}</span><small>sinf · ${g.topics} mavzu</small>
+        </div>`).join('')}</div>` + adminBar();
+  },
+
+  async topics(view) {
+    const list = await api(`/api/subjects/${view.subject.id}/grades/${view.grade}/topics`);
+    view.data = list;
+    $app.innerHTML = head(`${view.subject.name} · ${view.grade}-sinf`, 'Mavzular') +
+      (list.length ? `<div class="list">${list.map((t, i) => `
+        <div class="row" data-act="open-topic" data-id="${t.id}">
+          <div class="main"><b>${i + 1}. ${esc(t.title)}</b><small>${t.questions} ta savol</small></div>
+          ${tools('topic', t.id)}
+        </div>`).join('')}</div>` : '<div class="empty">Bu sinf uchun hali mavzu yoʻq</div>') +
+      (state.edit ? '<button class="btn add" data-act="add-topic">+ Mavzu qoʻshish</button>' : '') +
+      adminBar();
+  },
+
+  async topic(view) {
+    const t = await api(`/api/topics/${view.topic.id}/questions`);
+    view.data = t;
+    if (state.edit) {
+      $app.innerHTML = head(t.title, 'Savollar va toʻgʻri javoblar') +
+        `<div class="list">${t.questions.map((q, i) => `
+          <div class="row"><div class="main"><b>${i + 1}. ${esc(q.text)}</b>
+            <small>Javob: ${esc(q.answer || '')}</small></div>${tools('question', q.id)}</div>`).join('')}</div>` +
+        '<button class="btn add" data-act="add-question">+ Savol qoʻshish</button>' + adminBar();
+      return;
+    }
+    if (!t.questions.length) {
+      $app.innerHTML = head(t.title) + '<div class="empty">Bu mavzuda hali savol yoʻq</div>' + adminBar();
+      return;
+    }
+    if (view.index === undefined) { view.index = 0; view.score = 0; view.result = null; }
+    if (view.mode === 'voice' && voice && voice.view === view) return drawVoice(view);
+    if (!view.mode || view.mode === 'voice') {
+      view.mode = null;
+      $app.innerHTML = head(t.title, t.questions.length + ' ta savol') + `<div class="modes">
+        <button class="btn" data-act="start-voice">🎙 Ovozli suhbat
+          <small>Savol ovoz chiqarib oʻqiladi, siz ogʻzaki javob berasiz</small></button>
+        <button class="btn ghost" data-act="start-text">📝 Oddiy rejim
+          <small>Savolni oʻqiysiz, ovoz bilan yoki yozib javob berasiz</small></button>
+      </div>` + adminBar();
+      return;
+    }
+    if (view.index >= t.questions.length) {
+      drawScore(view);
+      return;
+    }
+    const q = t.questions[view.index];
+    const pct = Math.round(view.index / t.questions.length * 100);
+    let body;
+    if (view.result) {
+      const r = view.result;
+      body = `<div class="result ${r.correct ? '' : 'bad'}">
+        <h2>${r.correct ? '✅ Toʻgʻri!' : '❌ Notoʻgʻri'}</h2>
+        <p><span>Sizning javobingiz</span>${esc(r.transcript || '— (eshitilmadi)')}</p>
+        <p><span>Toʻgʻri javob</span>${esc(r.correct_answer)}</p>
+        ${r.comment ? `<p><span>Izoh</span>${esc(r.comment)}</p>` : ''}
+      </div>
+      <button class="btn" style="margin-top:14px" data-act="next">
+        ${view.index + 1 < t.questions.length ? 'Keyingi savol →' : 'Natijani koʻrish'}</button>
+      ${r.correct ? '' : '<button class="btn ghost" style="margin-top:8px" data-act="retry">Qayta urinish</button>'}`;
+    } else {
+      body = `<div class="micwrap"><button class="mic" id="mic" data-act="mic">🎤</button>
+        <div class="michint" id="michint">Bosing va javobni ayting</div></div>
+        <div class="typed"><input id="typed" placeholder="yoki javobni yozing" maxlength="300">
+        <button class="btn" data-act="send-text">➤</button></div>`;
+    }
+    $app.innerHTML = head(t.title) + `<div class="progress"><i style="width:${pct}%"></i></div>
+      <div class="qnum">Savol ${view.index + 1} / ${t.questions.length}</div>
+      <div class="qcard">${esc(q.text)}</div>${body}` + adminBar();
+  },
+};
+
+function drawScore(view) {
+  const t = view.data;
+  $app.innerHTML = head(t.title) + `<div class="score"><div class="num">${view.score} / ${t.questions.length}</div>
+    <p>toʻgʻri javob</p></div>
+    <button class="btn" data-act="restart">Qaytadan boshlash</button>
+    <button class="btn ghost" style="margin-top:8px" data-act="back">Mavzularga qaytish</button>`;
+}
+
+// ---------- Ovozli suhbat rejimi ----------
+let actx = null;    // AudioContext: jimlikni aniqlash va ovozni WAV ga o'tkazish uchun
+let player = null;  // ovoz chiqaruvchi element (telefon "ovozsiz" rejimda bo'lsa ham eshitiladi)
+let voice = null;   // joriy suhbat: { view, phase, stopped, stopListen }
+const audioCache = new Map();
+const SILENT = 'data:audio/wav;base64,UklGRmQGAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YUAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function getCtx() {
+  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+
+// Telefon ovozni faqat foydalanuvchi bosgan paytda "ochadi" — shu yerda bir marta ochib olinadi
+function unlockAudio() {
+  getCtx();
+  if (!player) player = new Audio();
+  player.src = SILENT;
+  const p = player.play();
+  if (p && p.catch) p.catch(() => {});
+}
+
+function loadAudio(path) {
+  if (!audioCache.has(path)) {
+    const job = fetch(path, { headers: { 'X-Init-Data': tg ? tg.initData : '' } })
+      .then(r => { if (!r.ok) throw new Error('tts'); return r.blob(); })
+      .then(b => URL.createObjectURL(b));
+    job.catch(() => audioCache.delete(path));
+    audioCache.set(path, job);
+  }
+  return audioCache.get(path);
+}
+
+const PHASES = {
+  speaking: ['🔊', 'Savolni tinglang…'],
+  listening: ['🎤', 'Javobingizni ayting, keyin doirani bosing'],
+  checking: ['⏳', 'Javob tekshirilmoqda…'],
+};
+
+function drawVoice(view) {
+  const t = view.data, q = t.questions[view.index], r = view.result;
+  const pct = Math.round(view.index / t.questions.length * 100);
+  const ph = voice ? voice.phase : 'checking';
+  const [icon, hint] = r ? [r.correct ? '✅' : '❌', ''] : PHASES[ph];
+  const cls = r ? (r.correct ? 'ok' : 'no') : ph;
+  $app.innerHTML = head(t.title) + `<div class="progress"><i style="width:${pct}%"></i></div>
+    <div class="qnum">Savol ${view.index + 1} / ${t.questions.length}</div>
+    <div class="qcard">${esc(q.text)}</div>
+    <div class="micwrap"><button class="orb ${cls}" data-act="voice-tap">${icon}</button>
+      <div class="michint">${hint}</div></div>
+    ${r ? `<div class="result ${r.correct ? '' : 'bad'}">
+      <h2>${r.correct ? 'Toʻgʻri!' : 'Notoʻgʻri'}</h2>
+      <p><span>Sizning javobingiz</span>${esc(r.transcript || '— (eshitilmadi)')}</p>
+      <p><span>Toʻgʻri javob</span>${esc(r.correct_answer)}</p></div>` : ''}
+    <button class="btn ghost" style="margin-top:18px" data-act="stop-voice">Suhbatni toʻxtatish</button>`;
+}
+
+function stopVoice() {
+  if (!voice) return;
+  const v = voice; voice = null; v.stopped = true;
+  if (player) { try { player.pause(); } catch (e) {} }
+  if (v.stopSpeak) v.stopSpeak();
+  if (v.stopListen) v.stopListen();
+}
+
+async function speak(v, path) {
+  try {
+    const url = await loadAudio(path);
+    if (v.stopped) return;
+    await new Promise((done, fail) => {
+      v.stopSpeak = done;
+      player.onended = done;
+      player.onerror = () => fail(new Error('play'));
+      player.src = url;
+      const p = player.play();
+      if (p && p.catch) p.catch(fail);
+    });
+  } catch (e) {
+    if (!v.stopped && !v.warned) { v.warned = true; toast('Ovoz chiqarib boʻlmadi — savolni ekrandan oʻqing'); }
+    if (!v.stopped) await sleep(1200);
+  }
+  v.stopSpeak = null;
+}
+
+// Javobni yozadi. O'quvchi gapirib bo'lib jim qolsa yoki doirani bossa, to'xtaydi.
+// Mikrofon faqat tinglash paytida ochiladi: doim ochiq tursa, telefon ovozni pasaytirib yuboradi.
+async function listen(v) {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  if (v.stopped) { stream.getTracks().forEach(t => t.stop()); return null; }
+  const ctx = getCtx();
+  return new Promise(resolve => {
+    const chunks = [];
+    const mr = new MediaRecorder(stream);
+    const src = ctx.createMediaStreamSource(stream);
+    const an = ctx.createAnalyser(); an.fftSize = 1024; src.connect(an);
+    const data = new Uint8Array(an.fftSize);
+    const t0 = performance.now();
+    let spoke = false, lastVoice = 0, floor = 0, floorN = 0;
+    const stop = () => { if (mr.state !== 'inactive') mr.stop(); };
+    const iv = setInterval(() => {
+      an.getByteTimeDomainData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) { const x = (data[i] - 128) / 128; sum += x * x; }
+      const rms = Math.sqrt(sum / data.length), now = performance.now(), el = now - t0;
+      if (el < 300) { floor += rms; floorN += 1; return; }       // xona shovqinini o'lchash
+      const threshold = Math.max(0.02, (floorN ? floor / floorN : 0) * 2.5);
+      if (rms > threshold) { spoke = true; lastVoice = now; }
+      if ((spoke && now - lastVoice > 1100) || (!spoke && el > 6000) || el > 12000) stop();
+    }, 100);
+    mr.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    mr.onstop = () => {
+      clearInterval(iv); try { src.disconnect(); } catch (e) {}
+      stream.getTracks().forEach(t => t.stop());
+      v.stopListen = null;
+      resolve(new Blob(chunks, { type: mr.mimeType || 'audio/webm' }));
+    };
+    v.stopListen = stop;
+    mr.start();
+  });
+}
+
+async function runVoice(v) {
+  const view = v.view, qs = view.data.questions;
+  const audio = (q, kind) => `/api/questions/${q.id}/audio?kind=${kind}`;
+  const phase = p => { v.phase = p; drawVoice(view); };
+  const fail = msg => { if (v.stopped) return; toast(msg); stopVoice(); view.mode = null; render(); };
+  while (view.index < qs.length && !v.stopped) {
+    const q = qs[view.index];
+    view.result = null;
+    phase('speaking');
+    await speak(v, audio(q, 'question'));
+    if (v.stopped) return;
+    phase('listening');
+    // o'quvchi javob berayotganda keyingi ovozlar oldindan yuklab qo'yiladi
+    loadAudio(audio(q, 'correct')).catch(() => {});
+    if (qs[view.index + 1]) loadAudio(audio(qs[view.index + 1], 'question')).catch(() => {});
+    let blob;
+    try { blob = await listen(v); } catch (e) { return fail('Mikrofonga ruxsat berilmadi'); }
+    if (v.stopped || !blob) return;
+    phase('checking');
+    let file = blob, name = 'javob.webm';
+    try { file = await toWav(blob); name = 'javob.wav'; } catch (e) {}
+    const fd = new FormData(); fd.append('audio', file, name);
+    let r;
+    try { r = await api(`/api/questions/${q.id}/check`, { method: 'POST', body: fd }); }
+    catch (e) { return fail(e.message); }
+    if (v.stopped) return;
+    view.result = r;
+    if (r.correct) view.score += 1;
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(r.correct ? 'success' : 'error');
+    drawVoice(view);
+    await speak(v, audio(q, r.correct ? 'correct' : 'wrong'));
+    if (v.stopped) return;
+    await sleep(500);
+    if (v.stopped) return;
+    view.result = null; view.index += 1;
+  }
+  if (!v.stopped) { stopVoice(); drawScore(view); }
+}
+
+async function startVoice(view) {
+  if (!navigator.mediaDevices || !window.MediaRecorder) {
+    return toast('Bu qurilmada ovozli suhbat ishlamaydi — oddiy rejimni tanlang');
+  }
+  unlockAudio();  // bosish paytida ochilishi shart, aks holda telefon ovoz chiqarmaydi
+  try {           // mikrofon ruxsati shu yerda bir marta so'raladi
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    s.getTracks().forEach(t => t.stop());
+  } catch (e) { return toast('Mikrofonga ruxsat berilmadi'); }
+  if (state.stack[state.stack.length - 1] !== view) return;
+  view.mode = 'voice'; view.index = 0; view.score = 0; view.result = null;
+  voice = { view, phase: 'speaking', stopped: false };
+  runVoice(voice);
+}
+
+// ---------- Ovoz yozish ----------
+let rec = null, recStream = null, recChunks = [], recTimer = null, recDiscard = false;
+const MAX_SECONDS = 20;
+
+async function startRecording() {
+  if (!navigator.mediaDevices || !window.MediaRecorder) {
+    return toast('Bu qurilmada ovoz yozib boʻlmadi — javobni yozib yuboring');
+  }
+  try { recStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) { return toast('Mikrofonga ruxsat berilmadi'); }
+  recChunks = []; recDiscard = false;
+  rec = new MediaRecorder(recStream);
+  rec.ondataavailable = e => { if (e.data.size) recChunks.push(e.data); };
+  rec.onstop = onRecordingStop;
+  rec.start();
+  const mic = document.getElementById('mic'), hint = document.getElementById('michint');
+  if (mic) { mic.classList.add('rec'); mic.textContent = '⏹'; }
+  let left = MAX_SECONDS;
+  if (hint) hint.textContent = `Yozilmoqda… tugatish uchun bosing (${left})`;
+  recTimer = setInterval(() => {
+    left -= 1;
+    const h = document.getElementById('michint');
+    if (h) h.textContent = `Yozilmoqda… tugatish uchun bosing (${left})`;
+    if (left <= 0) stopRecording(false);
+  }, 1000);
+}
+
+function stopRecording(discard) {
+  clearInterval(recTimer); recTimer = null;
+  if (rec && rec.state !== 'inactive') { recDiscard = !!discard; rec.stop(); }
+  else if (recStream) { recStream.getTracks().forEach(t => t.stop()); recStream = null; }
+}
+
+async function onRecordingStop() {
+  const type = rec.mimeType || 'audio/webm';
+  if (recStream) recStream.getTracks().forEach(t => t.stop());
+  recStream = null; rec = null;
+  if (recDiscard) return;
+  const blob = new Blob(recChunks, { type });
+  let file = blob, name = 'javob.webm';
+  try { file = await toWav(blob); name = 'javob.wav'; } catch (e) { /* asl format yuboriladi */ }
+  const fd = new FormData();
+  fd.append('audio', file, name);
+  await submitAnswer(fd);
+}
+
+// Har qanday brauzer formatini 16 kHz mono WAV ga o'tkazadi (Gemini uchun ishonchli format)
+async function toWav(blob) {
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const ctx = getCtx();
+  const raw = await blob.arrayBuffer();
+  const decoded = await new Promise((ok, no) => ctx.decodeAudioData(raw, ok, no));
+  const rate = 16000;
+  const off = new OAC(1, Math.max(1, Math.ceil(decoded.duration * rate)), rate);
+  const src = off.createBufferSource();
+  src.buffer = decoded; src.connect(off.destination); src.start();
+  const pcm = (await off.startRendering()).getChannelData(0);
+  const buf = new ArrayBuffer(44 + pcm.length * 2), v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + pcm.length * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, pcm.length * 2, true);
+  for (let i = 0; i < pcm.length; i++) {
+    const x = Math.max(-1, Math.min(1, pcm[i]));
+    v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7fff, true);
+  }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+async function submitAnswer(formData) {
+  const view = state.stack[state.stack.length - 1];
+  if (view.name !== 'topic' || !view.data) return;
+  const q = view.data.questions[view.index];
+  const mic = document.getElementById('mic'), hint = document.getElementById('michint');
+  if (mic) { mic.disabled = true; mic.classList.remove('rec'); mic.textContent = '⏳'; }
+  if (hint) hint.textContent = 'Javob tekshirilmoqda…';
+  try {
+    const r = await api(`/api/questions/${q.id}/check`, { method: 'POST', body: formData });
+    if (state.stack[state.stack.length - 1] !== view) return;
+    view.result = r;
+    if (r.correct && !view.counted) { view.score += 1; view.counted = true; }
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(r.correct ? 'success' : 'error');
+  } catch (e) { toast(e.message); }
+  render();
+}
+
+// ---------- Bosishlar ----------
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act, id = Number(el.dataset.id);
+  const view = state.stack[state.stack.length - 1];
+  if (/^(edit|del)-/.test(act)) e.stopPropagation();
+  try {
+    switch (act) {
+      case 'back': return back();
+      case 'toggle-edit': stopVoice(); state.edit = !state.edit; return render();
+      case 'start-voice': return startVoice(view);
+      case 'start-text': view.mode = 'text'; view.index = 0; view.score = 0; view.result = null; view.counted = false; return render();
+      case 'stop-voice': stopVoice(); view.mode = null; view.index = 0; view.score = 0; view.result = null; return render();
+      case 'voice-tap': if (voice && voice.stopListen) voice.stopListen(); return;
+      case 'open-subject': return go({ name: 'grades', subject: view.data.find(s => s.id === id) });
+      case 'open-grade': return go({ name: 'topics', subject: view.subject, grade: id });
+      case 'open-topic': return go({ name: 'topic', topic: { id } });
+      case 'mic': return rec ? stopRecording(false) : startRecording();
+      case 'send-text': {
+        const val = document.getElementById('typed').value.trim();
+        if (!val) return;
+        const fd = new FormData(); fd.append('text', val);
+        return submitAnswer(fd);
+      }
+      case 'next': view.index += 1; view.result = null; view.counted = false; return render();
+      case 'retry': view.result = null; return render();
+      case 'restart': view.mode = null; view.index = 0; view.score = 0; view.result = null; view.counted = false; return render();
+
+      case 'add-subject': {
+        const f = await formSheet('Yangi fan', [{ key: 'name', label: 'Fan nomi' },
+          { key: 'emoji', label: 'Belgi (emoji)', value: '📘' }]);
+        if (f) await api('/api/admin/subjects', { method: 'POST', json: f });
+        return render();
+      }
+      case 'edit-subject': {
+        const s = view.data.find(x => x.id === id);
+        const f = await formSheet('Fanni tahrirlash', [{ key: 'name', label: 'Fan nomi', value: s.name },
+          { key: 'emoji', label: 'Belgi (emoji)', value: s.emoji }]);
+        if (f) await api('/api/admin/subjects/' + id, { method: 'PUT', json: f });
+        return render();
+      }
+      case 'del-subject':
+        if (await confirmBox('Fan barcha mavzu va savollari bilan oʻchirilsinmi?'))
+          await api('/api/admin/subjects/' + id, { method: 'DELETE' });
+        return render();
+
+      case 'add-topic': {
+        const f = await formSheet('Yangi mavzu', [{ key: 'title', label: 'Mavzu nomi' }]);
+        if (f) await api('/api/admin/topics', { method: 'POST',
+          json: { subject_id: view.subject.id, grade: view.grade, title: f.title } });
+        return render();
+      }
+      case 'edit-topic': {
+        const t = view.data.find(x => x.id === id);
+        const f = await formSheet('Mavzuni tahrirlash', [{ key: 'title', label: 'Mavzu nomi', value: t.title }]);
+        if (f) await api('/api/admin/topics/' + id, { method: 'PUT', json: f });
+        return render();
+      }
+      case 'del-topic':
+        if (await confirmBox('Mavzu barcha savollari bilan oʻchirilsinmi?'))
+          await api('/api/admin/topics/' + id, { method: 'DELETE' });
+        return render();
+
+      case 'add-question': {
+        const f = await formSheet('Yangi savol', [{ key: 'text', label: 'Savol matni', multiline: true },
+          { key: 'answer', label: 'Toʻgʻri javob', multiline: true }]);
+        if (f) await api('/api/admin/questions', { method: 'POST', json: { topic_id: view.topic.id, ...f } });
+        return render();
+      }
+      case 'edit-question': {
+        const q = view.data.questions.find(x => x.id === id);
+        const f = await formSheet('Savolni tahrirlash', [
+          { key: 'text', label: 'Savol matni', value: q.text, multiline: true },
+          { key: 'answer', label: 'Toʻgʻri javob', value: q.answer, multiline: true }]);
+        if (f) await api('/api/admin/questions/' + id, { method: 'PUT', json: f });
+        return render();
+      }
+      case 'del-question':
+        if (await confirmBox('Savol oʻchirilsinmi?'))
+          await api('/api/admin/questions/' + id, { method: 'DELETE' });
+        return render();
+    }
+  } catch (err) { toast(err.message); }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.id === 'typed') {
+    const b = document.querySelector('[data-act="send-text"]');
+    if (b) b.click();
+  }
+});
+
+// ---------- Ishga tushirish ----------
+(async () => {
+  try { state.me = await api('/api/me'); }
+  catch (e) { $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  state.stack = [{ name: 'subjects' }];
+  render();
+})();
+</script>
+</body>
+</html>
